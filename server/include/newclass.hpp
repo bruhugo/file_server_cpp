@@ -1,0 +1,4 @@
+class newclass {
+public:
+    newclass();
+};
