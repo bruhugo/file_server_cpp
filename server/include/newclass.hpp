@@ -1,4 +1,0 @@
-class newclass {
-public:
-    newclass();
-};
