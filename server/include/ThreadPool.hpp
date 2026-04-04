@@ -7,24 +7,11 @@
 #include <condition_variable>
 #include <string>
 
-
-
 using namespace std;
 
 using Task = function<void()>;
 using Tasks = queue<Task>;
 using Workers = vector<thread>;
-
-class ThreadError : public exception{
-public:
-    ThreadError(char *msg);
-    ThreadError(char *msg, int threadNum);
-    char *what();
-
-    int threadNum;
-private:
-    char *message;
-};
 
 class ThreadPool {
 public:
