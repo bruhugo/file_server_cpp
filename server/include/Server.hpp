@@ -1,3 +1,5 @@
+#pragma once
+
 #include "ThreadPool.hpp"
 #include <vector>
 #include <mutex>
@@ -10,6 +12,9 @@
 #include <poll.h>
 
 #define BUFFER_SIZE 2048
+
+namespace fs = std::filesystem;
+using namespace std;
 
 // REQUEST TYPES
 enum class RequestType : uint8_t {
@@ -25,23 +30,32 @@ enum class ResponseStatus : uint8_t {
     UNAUTHORIZED,
     FILE_SIZE,
     SERVER_SIDE_ERROR,
-    BAD_REQUEST
+    BAD_REQUEST,
+    FILE_NOT_FOUND
 };
 
-using namespace std;
+struct UsernamePassword {
+    uint8_t username[32];
+    uint8_t password[32];
+};
 
 #pragma pack(push, 1)
-struct Header {
+struct RequestHeader {
     RequestType type;
     uint8_t username[32];
     uint8_t password[32];
     uint8_t filename[64];
     uint32_t filesize;
 };
+
+struct ResponseHeader {
+    ResponseStatus responseStatus;
+    uint32_t filesize;
+};
 #pragma pack(pop)
 
 struct Request {
-    Header header;
+    RequestHeader header;
     int fd;
 };
 
@@ -72,9 +86,12 @@ private:
     void handlerDownload(const Request& request);
     void handlerListFiles(const Request& request);
 
+    bool isAllowed(const Request&);
+
     void acceptWorker();
     void requestHandler(int fd);
     void closeConnection(int fd);
+    void sendResponseHeader(ResponseStatus status, uint32_t filesize, int fd);
 
     ThreadPool threadPool;
     mutex mu;

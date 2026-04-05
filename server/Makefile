@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -Wall -g -Iinclude
+CFLAGS = -Wall -g -Iinclude 
 
 TARGET = build/main
 SRCS = $(wildcard src/*.cpp)
