@@ -17,11 +17,6 @@
 #include <poll.h>
 #include <string.h>
 
-namespace fs = std::filesystem;
-using namespace std;
-
-const fs::path APP_STORAGE_DIRECTORY = "/var/lib/ssftserver";
-const fs::path APP_DATABASE_FILE = APP_STORAGE_DIRECTORY / "users.db";
 
 SSFTServer::SSFTServer(): threadPool(10){};
 
@@ -40,6 +35,9 @@ void SSFTServer::startServer(int port){
         return;
     }
 
+    int optval = 1;
+    if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)));
+
     int err = bind(serverSocket, (sockaddr*)&addr, sizeof(addr));
     if (err == -1){
         perror("binding socket");
@@ -47,32 +45,30 @@ void SSFTServer::startServer(int port){
         return;
     }
 
-    err = listen(serverSocket, 100);
+    err = listen(serverSocket, 20);
     if (err == -1){
         perror("listening socket");
         close(serverSocket);
         return;
     }
 
-    thread acceptThread([&]{acceptWorker();});
+    thread acceptThread([this]{acceptWorker();});
+    acceptThread.detach();
 
     for (;;){
-        pollfd* pfdsbuff;
-        nfds_t fdn;
+        vector<pollfd> pfdsbuff;
         {
             lock_guard<mutex> lk(mu);
-            memcpy(pfdsbuff, pfds.data(), pfds.size());
-            fdn = pfds.size();
+            pfdsbuff = pfds;
         }
         
-        int ready = poll(pfdsbuff, fdn, -1);
+        int ready = poll(pfdsbuff.data(), pfdsbuff.size(), -1);
         if (ready == -1){
             perror("poll");
-            delete pfdsbuff;
             continue;
         }
 
-        for (int i = 0; i < fdn; ++i){
+        for (int i = 0; i < pfdsbuff.size(); ++i){
             if (pfdsbuff[i].revents & POLLIN == POLLIN){
                 int fd = pfdsbuff[i].fd;
                 threadPool.submit([this, fd](){
@@ -80,8 +76,6 @@ void SSFTServer::startServer(int port){
                 });
             }
         }
-
-        delete pfdsbuff;
     } 
 }
 
@@ -90,6 +84,12 @@ void SSFTServer::acceptWorker(){
         int acceptSocket = accept(serverSocket, nullptr, 0);
         if (acceptSocket == -1){
             perror("accepting socket");
+            continue;
+        }
+
+        timeval optval = {5, 0};
+        if (setsockopt(acceptSocket, SOL_SOCKET, SO_RCVTIMEO, &optval, sizeof(optval)) == -1){
+            perror("seting socket option");
             continue;
         }
 
@@ -159,7 +159,7 @@ void SSFTServer::handlerAuthenticate(const Request& request){
 
 void SSFTServer::handlerUpload(const Request& request){
     if (!isAllowed(request))
-        throw SSFTServerError(ResponseStatus::UNAUTHORIZED, "User is not authenticated.");
+        throw SSFTServerError(ResponseStatus::UNAUTHORIZED, "Unautorized.");
 
     string username(
         reinterpret_cast<const char*>(request.header.username), 
@@ -208,7 +208,7 @@ void SSFTServer::handlerUpload(const Request& request){
 
 void SSFTServer::handlerDownload(const Request& request){
     if (!isAllowed(request))
-        throw SSFTServerError(ResponseStatus::UNAUTHORIZED, "File size is smaller than file size provided.");
+        throw SSFTServerError(ResponseStatus::UNAUTHORIZED, "Unauthorized.");
 
     string username(
         reinterpret_cast<const char*>(request.header.username), 
@@ -246,7 +246,27 @@ void SSFTServer::handlerDownload(const Request& request){
 }
 
 void SSFTServer::handlerListFiles(const Request& request){
+    if (!isAllowed(request))
+        throw SSFTServerError(ResponseStatus::UNAUTHORIZED, "Unauthorized.");
+
+    string username(reinterpret_cast<const char*>(request.header.username), sizeof(username));
+    fs::path userPath = APP_STORAGE_DIRECTORY / username;
+    if (!fs::exists(userPath)){
+        fs::create_directory(userPath);
+    }else if(!fs::is_directory(userPath)) {
+        fs::remove(userPath);
+        fs::create_directory(userPath);
+    }
     
+    vector<string> names;
+    for (const auto& dirEntry : userPath)
+        names.push_back(dirEntry.filename());
+    
+    sendResponseHeader(ResponseStatus::SUCCESS, names.size(), request.fd);
+    for (auto& name : names){
+        if (send(request.fd, name.data(), sizeof(RequestHeader::filesize), 0) == -1)
+            throw SSFTServerError(ResponseStatus::SERVER_SIDE_ERROR, "Error sending filenames.");
+    }
 }
 
 bool SSFTServer::isAllowed(const Request& request){

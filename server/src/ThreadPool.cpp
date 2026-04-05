@@ -37,8 +37,6 @@ void ThreadPool::submit(Task task){
 }
 
 void ThreadPool::workerLoop(int threadId){
-    cout << "Worker " << threadId << " started" << endl;
-    
     for (;;){
         {
             unique_lock<mutex> lk(mu);
