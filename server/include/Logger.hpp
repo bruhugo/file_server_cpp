@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include "Buffer.hpp"
 
 using namespace std;
 
@@ -17,6 +18,7 @@ enum class LOG_LEVEL {
 class Logger {
 public:
     static LOG_LEVEL level;
+    static int output;
 };
 
 class LogStream {
@@ -30,19 +32,18 @@ public:
 
     ~LogStream();
 
-    LogStream& operator<<(const string& str);
-    LogStream& operator<<(const int& number);
-    LogStream& operator<<(const float& decimal);
+    template<typename T>
+    LogStream& operator<<(const T& log){
+        stream_ << log;
+        return *this;
+    }
     
 private:
     LOG_LEVEL level_;
-    // I know I could use a stringstream, 
-    // but I want to handle it myself
-    string msg_;
-    string filename_;
+    Buffer stream_;
+    const char *filename_;
     uint32_t line_;
 };
-
 
 
 #define LOG_FATAL       LogStream(__FILE__, __LINE__, LOG_LEVEL::FATAL)
