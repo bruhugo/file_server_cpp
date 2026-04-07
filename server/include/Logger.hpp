@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <string>
-#include "Buffer.hpp"
+#include <sstream>
 
 using namespace std;
 
@@ -18,7 +18,13 @@ enum class LOG_LEVEL {
 class Logger {
 public:
     static LOG_LEVEL level;
-    static int output;
+    static void write(
+        const char* filename,
+        int line,
+        LOG_LEVEL msglevel,
+        string msg
+    );
+    static void setLogLevel(const string& debugString);
 };
 
 class LogStream {
@@ -40,7 +46,7 @@ public:
     
 private:
     LOG_LEVEL level_;
-    Buffer stream_;
+    ostringstream stream_;
     const char *filename_;
     uint32_t line_;
 };

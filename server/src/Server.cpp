@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstdint>
+#include <Logger.hpp>
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -29,6 +30,8 @@ void SSFTServer::startServer(int port){
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
+    LOG_INFO << "Server is starting...";
+
     serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (serverSocket == -1){
         perror("opening socket");
@@ -51,6 +54,8 @@ void SSFTServer::startServer(int port){
         close(serverSocket);
         return;
     }
+
+    LOG_INFO << "Server started, listening for connections.";
 
     thread acceptThread([this]{acceptWorker();});
     acceptThread.detach();
@@ -86,6 +91,8 @@ void SSFTServer::acceptWorker(){
             perror("accepting socket");
             continue;
         }
+
+        LOG_INFO << "Connection accepted on port: " << acceptSocket;
 
         timeval optval = {5, 0};
         if (setsockopt(acceptSocket, SOL_SOCKET, SO_RCVTIMEO, &optval, sizeof(optval)) == -1){
@@ -137,9 +144,12 @@ void SSFTServer::closeConnection(int fd){
         }), pfds.end());
     }
     close(fd);
+    LOG_DEBUG << "Connection closed at socket " << fd;
+    
 }
 
 void SSFTServer::handlerAuthenticate(const Request& request){  
+    LOG_DEBUG << "Authenticate request received at socket " << request.fd;
     UsernamePassword buff;
     fstream userfile(APP_DATABASE_FILE, ios::binary | ios::in | ios::out);
 
@@ -158,6 +168,7 @@ void SSFTServer::handlerAuthenticate(const Request& request){
 }
 
 void SSFTServer::handlerUpload(const Request& request){
+    LOG_DEBUG << "Upload request received at socket " << request.fd;
     if (!isAllowed(request))
         throw SSFTServerError(ResponseStatus::UNAUTHORIZED, "Unautorized.");
 
@@ -207,6 +218,7 @@ void SSFTServer::handlerUpload(const Request& request){
 }
 
 void SSFTServer::handlerDownload(const Request& request){
+    LOG_DEBUG << "Download request received at socket " << request.fd;
     if (!isAllowed(request))
         throw SSFTServerError(ResponseStatus::UNAUTHORIZED, "Unauthorized.");
 
@@ -246,6 +258,7 @@ void SSFTServer::handlerDownload(const Request& request){
 }
 
 void SSFTServer::handlerListFiles(const Request& request){
+    LOG_DEBUG << "List files request received at socket " << request.fd;
     if (!isAllowed(request))
         throw SSFTServerError(ResponseStatus::UNAUTHORIZED, "Unauthorized.");
 
@@ -282,6 +295,8 @@ bool SSFTServer::isAllowed(const Request& request){
             return true;
         }       
     }
+
+    LOG_DEBUG << "Unauthorized request at socket " << request.fd;
 
     return false;
 }
