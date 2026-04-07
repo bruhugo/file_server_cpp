@@ -6,7 +6,7 @@
       "type": "cppdbg",
       "request": "launch",
       "cwd": "${workspaceFolder}",
-      "program": "/home/bruno/Projects/cpp_template/server/build/main",
+      "program": "${workspaceFolder}/build/main",
       "MIMode": "gdb",
       "preLaunchTask": "debug make",
       "miDebuggerPath": "gdb"

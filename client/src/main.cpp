@@ -1,8 +1,13 @@
 #include <iostream>
+#include <Logger.hpp>
 
 int main(int argc, char *argv[]){
 
-    std::cout << "Hello from the server" << std::endl;
+    if (argc == 2)
+        Logger::setLogLevel(string(argv[1]));
+
+    LOG_DEBUG << "This is debug.";
+    LOG_INFO << "This is info.";
 
     return 0;
 }

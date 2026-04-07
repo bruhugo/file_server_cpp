@@ -7,9 +7,8 @@
 #include <stdlib.h>
 
 int main(int argc, char *argv[]){
-    if (argc == 2){
-        
-    }
+    if (argc == 2)
+        Logger::setLogLevel(string(argv[1]));       
 
     SSFTServer server;
     server.startServer(8080);

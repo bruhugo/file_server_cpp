@@ -1,8 +1,8 @@
 CC = g++
-CFLAGS = -Wall -g -Iinclude
+CFLAGS = -Wall -g -Iinclude -I../basic/include
 
 TARGET = build/main
-SRCS = $(wildcard src/*.cpp)
+SRCS = $(wildcard src/*.cpp) $(wildcard ../basic/src/*.cpp)
 OBJECTS = $(patsubst src/%.cpp, build/%.o, $(SRCS))
 
 $(TARGET): $(OBJECTS) | build
@@ -16,3 +16,6 @@ build:
 
 run: $(TARGET)
 	./$(TARGET)
+
+debug: $(TARGET)
+	./$(TARGET) DEBUG
