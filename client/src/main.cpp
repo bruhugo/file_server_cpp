@@ -11,7 +11,6 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include "Types.hpp"
 #include "Connection.hpp"
 
 using namespace std;
@@ -27,34 +26,37 @@ RequestInfo parseArgs(int argc, char *argv[]);
 RequestType getRequestTypeByName(const string& name);
 void setFilenameAndFilesize(char *filepath, const RequestInfo& requestInfo);
 
-void downloadFileHandler(   RequestInfo& req, Connection& conn);
-void uploadFileHandler(     RequestInfo& req, Connection& conn);
-void listFileHandler(       RequestInfo& req, Connection& conn);
-void authenticateHandler(   RequestInfo& req, Connection& conn);
+ResponseHeader downloadFileHandler(   RequestInfo& req, Connection& conn);
+ResponseHeader uploadFileHandler(     RequestInfo& req, Connection& conn);
+ResponseHeader listFileHandler(       RequestInfo& req, Connection& conn);
+ResponseHeader authenticateHandler(   RequestInfo& req, Connection& conn);
 
 
 int main(int argc, char *argv[]){
     try{
         RequestInfo requestInfo = parseArgs(argc, argv);
         Connection conn(requestInfo.hostname);
-
+        ResponseHeader h;
+        
         switch (requestInfo.header.type){
         case RequestType::AUTHENTICATE:
-            authenticateHandler(requestInfo, conn);
+            h = authenticateHandler(requestInfo, conn);
             break;
         case RequestType::DOWNLOAD:
-            downloadFileHandler(requestInfo, conn);
+            h = downloadFileHandler(requestInfo, conn);
             break;
         case RequestType::LIST:
-            listFileHandler(requestInfo, conn);
+            h = listFileHandler(requestInfo, conn);
             break;
         case RequestType::UPLOAD:
-            uploadFileHandler(requestInfo, conn);
+            h = uploadFileHandler(requestInfo, conn);
             break;
         default:
             throw runtime_error("Uknown request type provided.");
         }
 
+        cout << statusMessage(h.responseStatus) << endl;
+        
     }catch(const exception& err){
         cout << err.what() << endl;
     }
@@ -135,10 +137,14 @@ void setFilenameAndFilesize(char *filepathstr, RequestInfo& requestInfo){
     memcpy(requestInfo.header.filename, filename.c_str(), filename.size());
 }
 
-void downloadFileHandler(RequestInfo& req, Connection& conn){
+ResponseHeader downloadFileHandler(RequestInfo& req, Connection& conn){
+    ResponseHeader header = conn.recvHeader();
+    string filename(reinterpret_cast<char*>(req.header.filename));
+
+    conn.recvFile(filename, header.filesize);
 }
 
-void uploadFileHandler(RequestInfo& req, Connection& conn){
+ResponseHeader uploadFileHandler(RequestInfo& req, Connection& conn){
     fs::path filepath(req.filepath);
     if (!fs::exists(filepath))
         throw runtime_error("File does not exist.");
@@ -166,12 +172,36 @@ void uploadFileHandler(RequestInfo& req, Connection& conn){
 
     if (file.gcount() > 0)
         conn.sendData(buff, file.gcount());
+
+    return conn.recvHeader();
 }
 
-void listFileHandler(RequestInfo& req, Connection& conn){
+ResponseHeader listFileHandler(RequestInfo& req, Connection& conn){
+    conn.sendData(&req.header, sizeof(req.header));
+    ResponseHeader header = conn.recvHeader();
+    
+    // List file request type receives the name of the files 
+    // in the data field as names of 64 bytes each. The number of 
+    // names is given in filesize field.
+    vector<string> names;
+    for (int i = 0; i < header.filesize; i++){
+        char name[64];
+        uint32_t received, total = 0;
+        while (total < sizeof(name)){
+            received = conn.recvData(name + total, sizeof(name) - total);
+            if (received == -1)
+                throw runtime_error(strerror(errno));
+            else if (received == 0)
+                throw runtime_error("Connection terminated while reading.");
+        }
+        names.emplace_back(name);
+    }
 
+    for (const string& name : names)
+        cout << name << endl;
 }
 
-void authenticateHandler(RequestInfo& req, Connection& conn){
-
+ResponseHeader authenticateHandler(RequestInfo& req, Connection& conn){
+    conn.sendData(&req.header, sizeof(req.header));
+    return conn.recvHeader();
 }

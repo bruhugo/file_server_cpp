@@ -1,5 +1,6 @@
 #include "Connection.hpp"
 #include "Types.hpp"
+#include <fstream>
 
 #include <netdb.h>
 #include <sys/socket.h>
@@ -86,4 +87,41 @@ uint32_t Connection::recvData(void* buff, uint32_t buffsize){
         throw runtime_error(strerror(errno));
 
     return received;
+}
+
+ResponseHeader Connection::recvHeader(){
+    uint32_t received, total = 0, target = sizeof(ResponseHeader);
+    ResponseHeader header;
+
+    while(total < target){
+        received = recv(socket_, &header + total, sizeof(header), 0);
+        if (received == -1)
+            throw runtime_error(strerror(errno));
+        else if (received == 0)
+            throw runtime_error("Connection close while receiving response.");
+        total += received;
+    }
+
+    if (header.responseStatus != ResponseStatus::SUCCESS)
+        throw runtime_error(getResponseMessage(header.responseStatus));
+
+    return header;
+}
+
+void Connection::recvFile(string filename, uint32_t filesize){
+    ofstream file(filename, ios::binary | ios::out);
+
+    uint32_t received, total = 0;
+
+    char buff[BUFFER_SIZE];
+    while (total < filesize){
+        received = recv(socket_, buff, BUFFER_SIZE, 0);
+        if (received == -1)
+            throw runtime_error(strerror(errno));
+        else if (received == 0)
+            throw runtime_error("Connection closed while receiving file.");
+        
+        file.write(buff, received);
+        total += received;
+    }
 }

@@ -2,13 +2,21 @@ CC = g++
 CFLAGS = -Wall -g -Iinclude -I../basic/include
 
 TARGET = build/main
-SRCS = $(wildcard src/*.cpp) $(wildcard ../basic/src/*.cpp)
-OBJECTS = $(patsubst src/%.cpp, build/%.o, $(SRCS))
+
+# Only include existing .cpp files
+SRCS = src/main.cpp src/Connection.cpp ../basic/src/Types.cpp
+OBJECTS = $(SRCS:src/%.cpp=build/%.o)
 
 $(TARGET): $(OBJECTS) | build
 	$(CC) $(CFLAGS) $(OBJECTS) -o $@ 
 
-build/%.o: src/%.cpp | build 
+
+# Pattern rule for client sources
+build/%.o: src/%.cpp | build
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Pattern rule for basic sources
+build/%.o: ../basic/src/%.cpp | build
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build: 
