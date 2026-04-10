@@ -1,4 +1,5 @@
 #include "ThreadPool.hpp"
+#include "Logger.hpp"
 #include <mutex>
 #include <iostream>
 
@@ -6,14 +7,14 @@ using namespace std;
 
 ThreadPool::ThreadPool(size_t threads = 10){
     workers = Workers(threads);
-    cout << "Starting thread pool..." << endl;
+    LOG_DEBUG << "Starting thread pool";
     for (int i = 0; i < threads; i++)
         workers.push_back(thread([this, i]{workerLoop(i);}));
 }
 
 
 ThreadPool::~ThreadPool(){
-    cout << "Closing thread pool" << endl;
+    LOG_DEBUG << "Closing thread pool";
 
     {
         lock_guard<mutex> lk(mu);
@@ -37,12 +38,14 @@ void ThreadPool::submit(Task task){
 }
 
 void ThreadPool::workerLoop(int threadId){
+    LOG_DEBUG << "Worker " << threadId << " starting.";
     for (;;){
         {
             unique_lock<mutex> lk(mu);
             cv.wait(lk, [this]{return !tasks.empty() || stop;});
         }
         if (stop) return;
+        LOG_DEBUG << "Worker " << threadId << " received a task.";
         Task task;
         {
             lock_guard<mutex> lk(mu);

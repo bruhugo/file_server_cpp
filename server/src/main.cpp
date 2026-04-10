@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include "Types.hpp"
 #include <iostream>
 #include <chrono>
 #include <mutex>
@@ -11,5 +12,5 @@ int main(int argc, char *argv[]){
         Logger::setLogLevel(string(argv[1]));       
 
     SSFTServer server;
-    server.startServer(8080);
+    server.startServer(PORT);
 }

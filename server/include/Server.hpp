@@ -12,6 +12,7 @@
 
 #include <poll.h>
 
+
 using Handler = function<void(const Request& request)>;
 
 class SSFTServer {
@@ -37,11 +38,12 @@ private:
     mutex mu;
 
     int serverSocket;
+    int efd;
     vector<pollfd> pfds;
     unordered_map<RequestType, Handler> handlers = {
         {RequestType::AUTHENTICATE, [this](const Request& r){handlerAuthenticate(r); }},
-        {RequestType::DOWNLOAD,     [this](const Request& r){handlerUpload(r);       }},
-        {RequestType::UPLOAD,       [this](const Request& r){handlerDownload(r);     }},
-        {RequestType::LIST,         [this](const Request& r){handlerAuthenticate(r); }},
+        {RequestType::DOWNLOAD,     [this](const Request& r){handlerDownload(r);       }},
+        {RequestType::UPLOAD,       [this](const Request& r){handlerUpload(r);     }},
+        {RequestType::LIST,         [this](const Request& r){handlerListFiles(r); }},
     };
 };

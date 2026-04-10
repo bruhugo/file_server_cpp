@@ -19,3 +19,6 @@ run: $(TARGET)
 
 debug: $(TARGET)
 	./$(TARGET) DEBUG
+
+remove: 
+	rm -r build
