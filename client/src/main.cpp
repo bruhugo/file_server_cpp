@@ -138,6 +138,8 @@ void setFilenameAndFilesize(char *filepathstr, RequestInfo& requestInfo){
 }
 
 ResponseHeader downloadFileHandler(RequestInfo& req, Connection& conn){
+    conn.sendData(&req.header, sizeof(req.header));
+
     ResponseHeader header = conn.recvHeader();
     string filename(reinterpret_cast<char*>(req.header.filename));
 
@@ -186,14 +188,11 @@ ResponseHeader listFileHandler(RequestInfo& req, Connection& conn){
     vector<string> names;
     for (int i = 0; i < header.filesize; i++){
         char name[64];
-        uint32_t received, total = 0;
-        while (total < sizeof(name)){
-            received = conn.recvData(name + total, sizeof(name) - total);
-            if (received == -1)
-                throw runtime_error(strerror(errno));
-            else if (received == 0)
-                throw runtime_error("Connection terminated while reading.");
-        }
+        uint32_t received = conn.recvData(name, sizeof(name));
+        if (received == -1)
+            throw runtime_error(strerror(errno));
+        else if (received == 0)
+            throw runtime_error("Connection terminated while reading.");
         names.emplace_back(name);
     }
 

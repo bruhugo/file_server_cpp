@@ -6,10 +6,30 @@
       "type": "cppdbg",
       "request": "launch",
       "cwd": "${workspaceFolder}",
-      "program": "/home/bruno/Projects/cpp_template/server/build/main",
+      "program": "/home/bruno/Projects/file_server/client/build/main",
+      "args": ["localhost", "bruno", "list"],
       "MIMode": "gdb",
       "preLaunchTask": "debug make",
       "miDebuggerPath": "gdb"
+    },
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "cwd": "/home/bruno/Projects/file_server/client/src",
+      "program": "/home/bruno/Projects/file_server/client/src/build/Debug/outDebug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
     }
   ]
 }

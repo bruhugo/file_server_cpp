@@ -3,12 +3,11 @@
 #include <filesystem>
 
 #define BUFFER_SIZE 2048
+#define PORT_STR "7890"
+#define PORT 7890
 
 namespace fs = std::filesystem;
 using namespace std;
-
-const fs::path APP_STORAGE_DIRECTORY = "/var/lib/ssftserver";
-const fs::path APP_DATABASE_FILE = APP_STORAGE_DIRECTORY / "users.db";
 
 // REQUEST TYPES
 enum class RequestType : uint8_t {
@@ -27,6 +26,8 @@ enum class ResponseStatus : uint8_t {
     BAD_REQUEST,
     FILE_NOT_FOUND
 };
+
+string statusMessage(ResponseStatus status);
 
 struct UsernamePassword {
     uint8_t username[32];
@@ -57,11 +58,9 @@ struct SSFTServerError : exception {
 public:
     SSFTServerError(ResponseStatus sc, char* m): statusCode{sc}, msg{m} {}
 
-    const char* what(){
-        return msg;
-    }
+    const char* what();
 
+    ResponseStatus statusCode;
 private:
     char* msg;
-    ResponseStatus statusCode;
 };
